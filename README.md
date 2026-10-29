@@ -1,75 +1,50 @@
-# Getting Started with Snowflake Dashboards 2.0
+# Getting Started with Snowflake Dashboards
 
-Companion code for the Snowflake developer guide *Getting Started with Snowflake Dashboards 2.0*. You use Cortex Code prompts to build, refine, and check a native Workspaces dashboard on a revenue semantic view, publish it to a sales-ops role as an artifact, and ask follow-up "why" questions in Snowflake CoWork. All data is synthetic.
+Companion code for both Snowflake Dashboards developer guides:
 
-Everything runs in Snowsight. You don't need Python, a CLI, or a local clone.
+- **Part 1, *Getting Started with Snowflake Dashboards*:** everything is in [`getting-started/`](getting-started/). Run `setup.sql`, upload `revenue_pulse.dash`, and explore a working dashboard in a few minutes.
+- **Part 2, *Build Snowflake Dashboards with CoCo*:** build the same dashboard from scratch.
 
-The guide holds the walkthrough: the Cortex Code prompts, the expected output and checks for each step, and the screenshots. This repository holds what those steps run against: the SQL, the synthetic data, and the completed dashboard. The steps below are a quick reference; follow the guide the first time.
+Both parts use the same synthetic Revenue Pulse data. Part 1 gets a finished dashboard running in a few minutes, and Part 2 shows how to build it yourself with Cortex Code. The sections below give a quick-reference version of each.
 
-## Run
+### See it in action
 
-1. In Snowsight, open **Projects > Workspaces**, create a SQL file in **My Workspace**, and set the role to `ACCOUNTADMIN` and the warehouse to `COMPUTE_WH`.
-2. Paste and run [`sql/00_bootstrap.sql`](sql/00_bootstrap.sql). It creates `REVENUE_PULSE_DB`, an API integration, and a Git repository object over this repo.
-3. Run the remaining scripts straight from the repository:
+Revenue Pulse tracks a fictional B2B software company's net revenue against target, broken down by month, region, segment, account, and product. It's built with [Snowflake Dashboards](https://docs.snowflake.com/en/LIMITEDACCESS/cowork-dashboards), where every chart is also a filter through [chart actions](https://docs.snowflake.com/en/LIMITEDACCESS/cowork-dashboards#chart-actions). Click a chart and the rest of the dashboard filters to match:
 
-```sql
-EXECUTE IMMEDIATE FROM @REVENUE_PULSE_DB.DASHBOARD_DEMO.REVENUE_PULSE_REPO/branches/main/sql/01_setup.sql;
-EXECUTE IMMEDIATE FROM @REVENUE_PULSE_DB.DASHBOARD_DEMO.REVENUE_PULSE_REPO/branches/main/sql/02_semantic_view.sql;
-EXECUTE IMMEDIATE FROM @REVENUE_PULSE_DB.DASHBOARD_DEMO.REVENUE_PULSE_REPO/branches/main/sql/03_agent.sql;
-EXECUTE IMMEDIATE FROM @REVENUE_PULSE_DB.DASHBOARD_DEMO.REVENUE_PULSE_REPO/branches/main/sql/04_viewer_role.sql;
-```
+![Revenue Pulse dashboard: scrolling the KPI tiles and charts, then clicking a region on the variance bars to filter the other charts](docs/images/dashboard-chart-actions.gif)
 
-4. In **Workspaces**, select **+ > Git workspace**, paste this repo's URL, and choose the `REVENUE_PULSE_GIT_API` integration (the dialog may preselect another one) and **Public repository**.
-5. Open Cortex Code in the workspace and follow the guide's prompts to build your own `dashboards/revenue_pulse_draft.dash`. Leave `dashboards/revenue_pulse.dash` unchanged; it is the completed example used for the guide's screenshots and expected figures.
-   To view the completed example, open it and select the role and a warehouse (for example `COMPUTE_WH`) in its toolbar before **Run all**.
-6. After validating your draft, choose **Share > Publish as artifact** with the `DASHBOARD_DEMO_SALES_OPS` role. See the guide for the full walkthrough.
+## Part 1: Deploy the ready-made dashboard
 
-If your warehouse isn't `COMPUTE_WH`, replace it in `sql/03_agent.sql` and `sql/04_viewer_role.sql` in your own copy of the files before running them.
+Get the finished Revenue Pulse dashboard running in a few minutes, explore its chart actions and drill-downs, then ask CoWork why the numbers moved.
 
-## Layout
+**You need:** a schema you can create tables and semantic views in, and a warehouse. No admin role.
 
-```
-sql/00_bootstrap.sql         database, API integration, Git repository object
-sql/01_setup.sql             tables, stage, and data load from data/
-sql/02_semantic_view.sql     semantic view
-sql/03_agent.sql             Revenue Advisor Cortex agent
-sql/04_viewer_role.sql       least-privilege viewer role
-sql/99_cleanup.sql           teardown; never run automatically
-data/                        committed synthetic CSVs and expected_results.json
-dashboards/revenue_pulse.dash  completed example dashboard (reference; build your own draft beside it)
-docs/demo-script.md          five-minute presenter walkthrough of the completed dashboard
-```
+1. Point the files in [`getting-started/`](getting-started/) at your schema.
+2. Run `setup.sql` in a workspace to load the data and semantic view.
+3. Upload and open `revenue_pulse.dash`.
+4. When you're done, run `cleanup.sql`.
 
-Maintainer only (not needed to follow the guide): `scripts/generate_data.py` and `scripts/build_dashboard.py` regenerate `data/` and `dashboards/` from `config/demo.json`, and `tests/test_data.py` tests the generator.
+The [guide](https://github.com/sfc-gh-cnantasenamat/sfguide-getting-started-with-snowflake-dashboards) has the full walkthrough and expected numbers.
 
-### Local visual checks
+### Optional: OSSIE variant
 
-After changing the dashboard generator, regenerate the file and run the tests:
+[`getting-started-ossie/`](getting-started-ossie/) is the same setup with the semantic view defined in open [Apache Ossie](https://docs.snowflake.com/en/sql-reference/stored-procedures/system_create_semantic_view_from_ossie_yaml) YAML instead of native DDL. Use it in place of `getting-started/`; the dashboard returns the same results.
 
-```bash
-python3 scripts/build_dashboard.py
-python3 -m unittest discover -s tests -v
-```
+## Part 2: Build the dashboard with CoCo
 
-Install the optional `vl-convert-python` package to include local chart-rendering checks.
-Set `DASHBOARD_PREVIEW_DIR` to a local output directory to retain driver-chart PNGs.
-The checks cover narrow and wide tiles, light and dark theme simulations, signed
-variances, and empty data. Native scorecard sparklines and dashboard interactions
-still need verification in Snowsight; the local Vega renderer does not exercise them.
+Build the same dashboard yourself by prompting Cortex Code, publish it to a sales-ops role, and ask follow-up questions in CoWork.
 
-The driver donut uses absolute variance for slice area and signed values for its
-in-ring labels. Slice area is not a share of the net shortfall. Its data-relative
-palette also appears on the region bars and the variance waterfall; colors show relative variance,
-not fixed alert bands.
+**You need:** `ACCOUNTADMIN` (setup creates a database, a Git integration, and a viewer role) and a warehouse.
 
-`config/chart_specs/` preserves the native editor's driver donut and expanded net
-revenue and variance scorecards, including their animations. The generator loads
-these specs and checks that the scorecard settings match its configuration. Keep
-these files when regenerating so native editor refinements are not lost.
+1. Run the SQL scripts in [`sql/`](sql/) in order, starting with `00_bootstrap.sql`.
+2. Open this repo as a Git workspace.
+3. Prompt Cortex Code to build your own dashboard, using `dashboards/revenue_pulse.dash` as the reference.
+4. Publish it as an artifact and share it.
 
-The companion dashboard uses `REVENUE_PULSE_DB.DASHBOARD_DEMO` and omits publishing
-IDs so it can be deployed and published independently in another account.
+The [guide](https://github.com/sfc-gh-cnantasenamat/sfguide-build-snowflake-dashboards-with-coco) has the prompts, checks, and screenshots for each step.
 
-## Clean up
+## References
 
-Remove every role from the dashboard's **Share** dialog, delete the artifact in CoWork, and delete the Git workspace (**...** next to its name > **Delete**). Then run `sql/99_cleanup.sql`, which drops `REVENUE_PULSE_DB`, the viewer role, and the API integration.
+- [Dashboards in Snowsight and Snowflake CoWork](https://docs.snowflake.com/en/LIMITEDACCESS/cowork-dashboards): Snowflake Dashboards documentation
+- [Chart actions](https://docs.snowflake.com/en/LIMITEDACCESS/cowork-dashboards#chart-actions): how clicking or dragging on a chart filters other tiles
+- [SYSTEM$CREATE_SEMANTIC_VIEW_FROM_OSSIE_YAML](https://docs.snowflake.com/en/sql-reference/stored-procedures/system_create_semantic_view_from_ossie_yaml): used by the OSSIE variant
